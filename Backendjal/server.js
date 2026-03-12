@@ -14,15 +14,15 @@ const PORT = 4000;
 // 3. APPLY MIDDLEWARE
 // In section 3
 app.use(cors({
-  origin:['https://statuesque-pavlova-67cd37.netlify.app',
-  'http://localhost:3000'] // IMPORTANT: Use your actual Netlify URL here
+    origin: ['https://statuesque-pavlova-67cd37.netlify.app',
+        'http://localhost:3000'] // IMPORTANT: Use your actual Netlify URL here
 }));
 app.use(express.json());
 
 // 4. INITIALIZE FIREBASE ADMIN SDK
 const serviceAccount = require('./serviceAccountKey.json'); // Make sure this file is in your backend folder
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+    credential: admin.credential.cert(serviceAccount)
 });
 const auth = admin.auth();
 const db = admin.firestore();
@@ -87,6 +87,8 @@ app.post('/api/chat', async (req, res) => {
         // Now that the route is protected, we know who is making the request
         console.log("Received request for public /api/chat route");
         const { message } = req.body;
+        console.log("Message received:", message);
+        console.log("Using API Key:", process.env.OPENROUTER_API_KEY ? "Present (Starts with " + process.env.OPENROUTER_API_KEY.substring(0, 5) + ")" : "Missing");
 
         const systemPrompt = `
 You are 'Jal-Rakshak AI', a compassionate, reliable, and knowledgeable public health assistant...
@@ -94,7 +96,7 @@ You are 'Jal-Rakshak AI', a compassionate, reliable, and knowledgeable public he
 `;
 
         const completion = await openAI.chat.completions.create({
-            model: "alibaba/tongyi-deepresearch-30b-a3b:free",
+            model: "stepfun/step-3.5-flash:free",
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: message },
@@ -106,11 +108,17 @@ You are 'Jal-Rakshak AI', a compassionate, reliable, and knowledgeable public he
 
     } catch (error) {
         console.error("Error calling OpenRouter API for chat:", error);
-        res.status(500).json({ error: "Failed to get response from AI." });
+        if (error.response) {
+            console.error(error.response.status);
+            console.error(error.response.data);
+        } else {
+            console.error(error.message);
+        }
+        res.status(500).json({ error: "Failed to get response from AI.", details: error.message });
     }
 });
 
 // 8. START THE SERVER
-app.listen(PORT, () => {
-    console.log(`🚀 Server is running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server is running on http://0.0.0.0:${PORT}`);
 });

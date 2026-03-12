@@ -8,14 +8,14 @@ body {
     sans-serif !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: radial-gradient(circle at 50% 0%, #023859 0%, #011C40 100%) !important;
-  color: #ffffff !important;
+  background: #000000 !important;
+  color: #F8FAFC !important;
   min-height: 100vh;
   overflow-x: hidden;
 }
 
 html {
-  background: radial-gradient(circle at 50% 0%, #023859 0%, #011C40 100%) !important;
+  background: #000000 !important;
   min-height: 100vh;
 }
 

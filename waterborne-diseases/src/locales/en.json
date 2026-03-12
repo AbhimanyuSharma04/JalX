@@ -406,5 +406,28 @@
     "unknown": "Unknown",
     "registering": "Registering...",
     "loggingIn": "Logging in...",
-    "implementationPending": "Implementation pending"
+    "implementationPending": "Implementation pending",
+    "newsCard": {
+        "title": "Public Health Alerts & Disease News",
+        "subtitle": "Verified updates from WHO & MoHFW",
+        "noAlerts": "No active alerts at this time.",
+        "footer": "Refreshes every 12 hours • Data aggregated from public sources",
+        "source": "Source",
+        "readMore": "Read more",
+        "loading": "Loading...",
+        "error": "Unable to load latest health alerts."
+    },
+    "dashboard": {
+        "noTrendData": "No trend data available",
+        "noEmergencies": "No active emergencies reported"
+    },
+    "disclaimer": "Data sourced from mock simulations & IDSP public records (Verified via WHO/MoHFW norms).",
+    "charts": {
+        "activeCases": "Active Cases",
+        "recovered": "Recovered",
+        "deaths": "Deaths",
+        "diarrhea": "Diarrhea",
+        "cholera": "Cholera",
+        "typhoid": "Typhoid"
+    }
 }

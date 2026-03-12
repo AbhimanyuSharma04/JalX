@@ -6,17 +6,15 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaBars, FaTimes, FaRobot, FaHome, FaDatabase, FaUsers, FaInfoCircle, FaComments, FaStethoscope, FaMapMarkerAlt, FaVideo, FaFlask, FaShieldAlt, FaMicrochip, FaBolt, FaChevronDown, FaSignOutAlt, FaExchangeAlt, FaClipboardList, FaTrash, FaEye, FaTint, FaFaucet } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/router';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import 'bootstrap/dist/css/bootstrap.min.css';
-
+import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
 import SafetyScale from './Components/SafetyScale';
 import PredictionGauge from './Components/PredictionGauge';
 import CustomDropdown from './Components/CustomDropdown';
-import './Dashboard.css'; // MUST be last to override Bootstrap
-import './MobileWaterData.css'; // New mobile styles
+import NewsCard from './Components/NewsCard';
+
 
 const CustomChartTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -40,152 +38,15 @@ const CustomChartTooltip = ({ active, payload, label }) => {
     return null;
 };
 
-// Helper component to handle map interaction state
-const MapInteractionController = ({ isInteractive }) => {
-    const map = useMap();
-
-    useEffect(() => {
-        if (isInteractive) {
-            map.dragging.enable();
-            map.scrollWheelZoom.enable();
-            map.touchZoom.enable();
-            map.doubleClickZoom.enable();
-            map.boxZoom.enable();
-            map.keyboard.enable();
-            if (map.tap) map.tap.enable();
-        } else {
-            map.dragging.disable();
-            map.scrollWheelZoom.disable();
-            map.touchZoom.disable();
-            map.doubleClickZoom.disable();
-            map.boxZoom.disable();
-            map.keyboard.disable();
-            if (map.tap) map.tap.disable();
-        }
-    }, [isInteractive, map]);
-
-    return null;
-};
-const OutbreakMap = ({ outbreaks, devices = [], title, mapId }) => {
-    const { t } = useTranslation();
-    // Default center for India map
-    let mapCenter = [22.351114, 78.667742];
-    const [isInteractive, setIsInteractive] = useState(false);
-    let defaultZoom = 5;
-
-    // If implementing "Nearby", center on a specific location (e.g., Delhi for mock)
-    if (mapId === 'nearby') {
-        mapCenter = [28.6139, 77.2090];
-        defaultZoom = 12;
-    }
-
-    const getMarkerOptions = (outbreak) => {
-        let color;
-        switch (outbreak.severity) {
-            case 'critical': color = '#ef4444'; break;
-            case 'high': color = '#f97316'; break;
-            case 'medium': color = '#3b82f6'; break;
-            case 'low': color = '#10b981'; break;
-            default: color = '#64748b';
-        }
-        return {
-            radius: 5 + (outbreak.cases / 3000),
-            fillColor: color,
-            color: color,
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.6
-        };
-    };
-
-    const getDeviceMarkerOptions = (device) => {
-        let color = '#06b6d4'; // Cyan for devices
-        if (device.status === 'alert') color = '#ef4444';
-
-        return {
-            radius: 8,
-            fillColor: color,
-            color: '#ffffff',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.8
-        };
-    };
-
-    return (
-        <div
-            className="jr-card mb-4 p-0 overflow-hidden h-100"
-            onClick={() => setIsInteractive(true)}
-            onMouseLeave={() => setIsInteractive(false)}
-            style={{ cursor: isInteractive ? 'grab' : 'pointer' }}
-        >
-            <div className="p-3 border-bottom border-light border-opacity-10 bg-dark bg-opacity-25 d-flex justify-content-between align-items-center">
-                <h5 className="mb-0 fs-6 fw-bold text-white"><FaMapMarkerAlt className="me-2 text-primary" />{title}</h5>
-                {!isInteractive && <small className="text-white-50" style={{ fontSize: '0.7em' }}>{t('clickToInteract')}</small>}
-            </div>
-            <MapContainer
-                key={mapId}
-                center={mapCenter}
-                zoom={defaultZoom}
-                zoomControl={false}
-                attributionControl={false}
-                scrollWheelZoom={false} // Start disabled
-                dragging={false} // Start disabled
-                touchZoom={false} // Start disabled
-                doubleClickZoom={false} // Start disabled
-                style={{
-                    height: '400px',
-                    width: '100%',
-                    background: '#f8f9fa',
-                }}
-            >
-                <MapInteractionController isInteractive={isInteractive} />
-                <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-
-                {outbreaks.map(outbreak => (
-                    <CircleMarker
-                        key={`outbreak-${outbreak.id}`}
-                        center={outbreak.position}
-                        pathOptions={getMarkerOptions(outbreak)}
-                    >
-                        <Popup>
-                            <div style={{ color: 'black' }}>
-                                <div className="fw-bold fs-6 mb-2">{outbreak.name}</div>
-                                <div className="small mb-1"><FaMapMarkerAlt className="me-1" />{outbreak.state}</div>
-                                <div className="mb-1"><strong>{t('cases')}:</strong> {outbreak.cases.toLocaleString()}</div>
-                                <div className="mb-2"><strong className="text-capitalize">{t('severityLabel')}:</strong> <span style={{ color: getMarkerOptions(outbreak).fillColor }}>{t(`severity.${outbreak.severity}`)}</span></div>
-                            </div>
-                        </Popup>
-                    </CircleMarker>
-                ))}
-
-                {devices.map(device => (
-                    <CircleMarker
-                        key={`device-${device.id}`}
-                        center={device.position}
-                        pathOptions={getDeviceMarkerOptions(device)}
-                    >
-                        <Popup>
-                            <div style={{ color: 'black' }}>
-                                <div className="fw-bold fs-6 mb-1">{device.name}</div>
-                                <div className="badge bg-primary mb-2">{device.type}</div>
-                                <div className="small mb-1"><strong>{t('statusLabel')}:</strong> <span className={device.status === 'alert' ? 'text-danger fw-bold' : 'text-success'}>{t(`status.${device.status}`)}</span></div>
-                                <div className="p-2 bg-light rounded border mt-2">
-                                    <div className="d-flex justify-content-between small mb-1"><span>{t('pH')}:</span> <strong>{device.readings.ph}</strong></div>
-                                    <div className="d-flex justify-content-between small mb-1"><span>{t('turbidity')}:</span> <strong>{device.readings.turbidity} NTU</strong></div>
-                                    <div className="d-flex justify-content-between small"><span>{t('battery')}:</span> <strong>{device.battery}</strong></div>
-                                </div>
-                            </div>
-                        </Popup>
-                    </CircleMarker>
-                ))}
-            </MapContainer>
+// MapInteractionController and OutbreakMap have been moved to src/Components/OutbreakMap.js
+const OutbreakMap = dynamic(() => import('./Components/OutbreakMap'), {
+    ssr: false,
+    loading: () => <div className="jr-card mb-4 p-0 d-flex align-items-center justify-content-center" style={{ height: '400px', background: '#f8f9fa' }}>
+        <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading Map...</span>
         </div>
-    );
-};
+    </div>
+});
 
 
 
@@ -200,6 +61,7 @@ const App = () => {
     const [isTyping, setIsTyping] = useState(false);
     const [darkMode] = useState(true);
     const [selectedOutbreak, setSelectedOutbreak] = useState(null);
+    const [dataError, setDataError] = useState(null);
 
 
     const [formData, setFormData] = useState({
@@ -230,8 +92,11 @@ const App = () => {
         water_source_type: '',
         uv_sensor: '',
         guva_sensor: '',
-        conductivity: ''
+        conductivity: '',
+        dissolvedOxygen: '' // New Parameter
     });
+
+
 
 
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -240,15 +105,14 @@ const App = () => {
     const [waterAnalysisResult, setWaterAnalysisResult] = useState(null);
     const [waterAnalysisError, setWaterAnalysisError] = useState(null);
     const mainChatRef = useRef(null);
-    const widgetChatRef = useRef(null);
+
     const [isFetching, setIsFetching] = useState(false);
     const [fetchMessage, setFetchMessage] = useState('');
     const [userName, setUserName] = useState('');
 
     // Refs for click outside to close
     const profileDropdownRef = useRef(null);
-    const chatbotRef = useRef(null);
-    const chatbotToggleRef = useRef(null);
+
 
     // Device Management State
     const [devices, setDevices] = useState([]);
@@ -262,7 +126,77 @@ const App = () => {
     const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
     const [savedReadings, setSavedReadings] = useState([]);
     const [selectedReading, setSelectedReading] = useState(null);
-    const navigate = useNavigate();
+    const router = useRouter();
+    const navigate = (path) => router.push(path); // Adapter to minimize changes
+
+    // New State for Dynamic Data
+    const [outbreaks, setOutbreaks] = useState([]);
+    const [stats, setStats] = useState([]);
+    const [trends, setTrends] = useState([]);
+    const [lastUpdated, setLastUpdated] = useState(null);
+    const [emergencyStatus, setEmergencyStatus] = useState([]);
+
+    // Fetch Data from APIs
+    useEffect(() => {
+        const processTrendsData = (data) => {
+            const result = {};
+            data.forEach(item => {
+                const key = `${item.month}-${item.year}`; // Group by month-year
+                if (!result[key]) {
+                    result[key] = { month: item.month, year: item.year };
+                }
+                // Normalize disease name to key (e.g. 'Diarrhea' -> 'diarrhea')
+                const diseaseKey = item.disease_name.toLowerCase().replace(/ /g, '');
+                result[key][diseaseKey] = item.cases;
+            });
+            return Object.values(result);
+        };
+
+        const fetchDashboardData = async () => {
+            try {
+                const [outbreaksRes, statsRes, emergencyRes, trendsRes] = await Promise.all([
+                    fetch('/api/outbreaks'),
+                    fetch('/api/state-comparison'),
+                    fetch('/api/emergency-status'),
+                    fetch('/api/trends')
+                ]);
+
+                if (!outbreaksRes.ok) throw new Error(`Outbreaks API failed: ${outbreaksRes.status}`);
+                if (!statsRes.ok) throw new Error(`Stats API failed: ${statsRes.status}`);
+                if (!emergencyRes.ok) throw new Error(`Emergency API failed: ${emergencyRes.status}`);
+                if (!trendsRes.ok) throw new Error(`Trends API failed: ${trendsRes.status}`);
+
+                const outbreaksData = await outbreaksRes.json();
+                const formattedOutbreaks = outbreaksData.map(item => ({
+                    ...item,
+                    position: [item.latitude, item.longitude],
+                    name: item.disease_name,
+                    cases: item.total_cases,
+                    rate: item.weekly_growth_rate
+                }));
+                setOutbreaks(formattedOutbreaks);
+                if (outbreaksData.length > 0) setLastUpdated(outbreaksData[0].last_updated);
+
+                const statsData = await statsRes.json();
+                setStats(statsData);
+
+                const emergencyData = await emergencyRes.json();
+                setEmergencyStatus(emergencyData);
+
+                const trendsData = await trendsRes.json();
+                const processedTrends = processTrendsData(trendsData);
+                setTrends(processedTrends);
+
+            } catch (error) {
+                console.error("Failed to fetch dashboard data:", error);
+                setDataError(error.message);
+            }
+        };
+
+        fetchDashboardData();
+    }, []);
+
+
 
     const fetchReadings = async () => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -426,7 +360,7 @@ const App = () => {
 
         try {
             // Call your backend's /api/chat endpoint
-            const response = await fetch('https://jalbackend.onrender.com/api/chat', {
+            const response = await fetch('http://localhost:4000/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -469,9 +403,7 @@ const App = () => {
         if (mainChatRef.current) {
             mainChatRef.current.scrollTop = mainChatRef.current.scrollHeight;
         }
-        if (widgetChatRef.current) {
-            widgetChatRef.current.scrollTop = widgetChatRef.current.scrollHeight;
-        }
+
     }, [messages]);
 
     const diseaseDatabase = {
@@ -528,16 +460,33 @@ const App = () => {
         setIsWaterAnalyzing(true);
         setWaterAnalysisResult(null);
         setWaterAnalysisError(null);
-        const API_URL = 'https://karan0301-sih.hf.space/predict'; // Your ML Model API
+        // Updated API URL
+        const API_URL = 'https://karan0301-water-contamination-api.hf.space/predict';
 
+        // Extract raw values from form
+        const ph = parseFloat(waterFormData.ph) || 0;
+        const turbidity = parseFloat(waterFormData.turbidity) || 0;
+        const temperature = parseFloat(waterFormData.temperature) || 0;
+        const conductivity = parseFloat(waterFormData.conductivity) || 0;
+        const doVal = parseFloat(waterFormData.dissolvedOxygen) || 0;
+
+        // Construct payload strictly matching WaterInput schema
+        // We use raw values as proxies for 'roll_std' and set 'diff' to 0
         const submissionData = {
-            contaminant: parseFloat(waterFormData.contaminantLevel) || 0,
-            ph: parseFloat(waterFormData.ph) || 0,
-            turbidity: parseFloat(waterFormData.turbidity) || 0,
-            temperature: parseFloat(waterFormData.temperature) || 0,
-            water_source: waterFormData.water_source_type || 'River',
-            uv_sensor: (waterFormData.uv_sensor || 'Green').toLowerCase(),
-            guva_sensor: parseFloat(waterFormData.guva_sensor) || 0
+            DO_roll_std: doVal,
+            DO_diff: 0,
+            Conductivity_roll_std: conductivity,
+            Conductivity_diff: 0,
+            Temperature_roll_std: temperature,
+            Temperature_diff: 0,
+            Turbidity_roll_std: turbidity,
+            Turbidity_diff: 0,
+            pH_roll_std: ph,
+            pH_diff: 0,
+            stress_index: 0,
+            stress_cum: 0,
+            turb_cond_interaction: turbidity * conductivity,
+            do_turb_interaction: doVal * turbidity
         };
 
         try {
@@ -553,18 +502,14 @@ const App = () => {
             const result = await response.json();
             console.log("API Response:", result);
 
-            // Normalize Result because APIs are inconsistent
+            // Normalize Result - The new API returns { "risk_probability": float, "risk_level": string }
             const normalizedResult = {
                 ...result,
-                risk_level: result.risk_level || result.prediction || result.label || result.result || t('unknown'),
-                confidence: result.confidence || result.score || result.probability || 0
+                risk_level: result.risk_level, // "High", "Moderate", "Low"
+                confidence: (result.risk_probability).toFixed(1) // Convert probability to percentage string
             };
 
             setWaterAnalysisResult(normalizedResult);
-
-            // Temporary: Show raw result in UI for debugging if needed
-            // setFetchMessage(`Debug: ${JSON.stringify(result)}`); 
-            // Better: Just clear error
             setWaterAnalysisError(null);
 
         } catch (error) {
@@ -595,7 +540,8 @@ const App = () => {
                     conductivity: sensorValues.conductivity ? Number(sensorValues.conductivity).toFixed(2) : prevData.conductivity,
                     contaminantLevel: sensorValues.tds ? Number(sensorValues.tds).toFixed(2) : prevData.contaminantLevel, // Map 'tds' from Firebase
                     uv_sensor: sensorValues.color || 'Green',                   // Map 'color' from Firebase
-                    guva_sensor: sensorValues.uv ? Number(sensorValues.uv).toFixed(2) : prevData.guva_sensor
+                    guva_sensor: sensorValues.uv ? Number(sensorValues.uv).toFixed(2) : prevData.guva_sensor,
+                    dissolvedOxygen: sensorValues.do ? Number(sensorValues.do).toFixed(2) : (sensorValues.dissolved_oxygen ? Number(sensorValues.dissolved_oxygen).toFixed(2) : prevData.dissolvedOxygen)
                 }));
 
                 // Set a success message instead of an alert
@@ -634,7 +580,7 @@ const App = () => {
         });
     };
 
-    const toggleChat = () => setChatOpen(!chatOpen);
+
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
@@ -658,27 +604,13 @@ const App = () => {
                 setShowProfileMenu(false);
             }
 
-            // Close Chatbot
-            // Check if click is outside chat window AND outside the toggle button
-            if (chatOpen &&
-                chatbotRef.current && !chatbotRef.current.contains(event.target) &&
-                chatbotToggleRef.current && !chatbotToggleRef.current.contains(event.target)
-            ) {
-                setChatOpen(false);
-            }
+
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [sidebarOpen, showProfileMenu, chatOpen]);
+    }, [sidebarOpen, showProfileMenu]);
 
-    const diseaseOutbreaks = [
-        { id: 1, name: t('outbreaks.diarrhea.name'), diseaseKey: 'gastroenteritis', state: t('states.UP'), cases: 95000, rate: 25.5, severity: 'critical', position: [26.8467, 80.9462], healthContact: "104", nearbyHospitals: 25, latestNews: t('outbreaks.diarrhea.news') },
-        { id: 2, name: t('outbreaks.cholera.name'), diseaseKey: 'cholera', state: t('states.WB'), cases: 88000, rate: 22.1, severity: 'high', position: [22.5726, 88.3639], healthContact: "108", nearbyHospitals: 18, latestNews: t('outbreaks.cholera.news') },
-        { id: 3, name: t('outbreaks.typhoid.name'), diseaseKey: 'typhoid', state: t('states.MH'), cases: 75000, rate: 20.8, severity: 'medium', position: [19.0760, 72.8777], healthContact: "102", nearbyHospitals: 14, latestNews: t('outbreaks.typhoid.news') },
-        { id: 4, name: t('outbreaks.hepatitis.name'), diseaseKey: 'hepatitisA', state: t('states.BR'), cases: 62000, rate: 18.2, severity: 'low', position: [25.0961, 85.3131], healthContact: "103", nearbyHospitals: 10, latestNews: t('outbreaks.hepatitis.news') },
-        { id: 5, name: t('outbreaks.gastroenteritis.name'), diseaseKey: 'gastroenteritis', state: t('states.GJ'), cases: 55000, rate: 16.5, severity: 'medium', position: [23.0225, 72.5714], healthContact: "108", nearbyHospitals: 12, latestNews: t('outbreaks.gastroenteritis.news') },
-        { id: 6, name: t('outbreaks.typhoidFever.name'), diseaseKey: 'typhoid', state: t('states.PB'), cases: 48000, rate: 15.3, severity: 'low', position: [30.7333, 76.7794], healthContact: "101", nearbyHospitals: 9, latestNews: t('outbreaks.typhoidFever.news') },
-    ];
+    const diseaseOutbreaks = outbreaks.length > 0 ? outbreaks : [];
 
     const communityEvents = [
         { id: 1, title: t('events.webinar.title'), type: 'online', platform: 'Zoom', date: 'October 20, 2025', time: '3:00 PM - 5:00 PM', description: t('events.webinar.desc'), attendees: 250, status: 'upcoming' },
@@ -689,28 +621,13 @@ const App = () => {
         { id: 6, title: t('events.seminar.title'), type: 'online', platform: 'Google Meet', date: 'January 10, 2026', time: '2:00 PM - 4:00 PM', description: t('events.seminar.desc'), attendees: 300, status: 'upcoming' },
     ];
 
-    const allIndiaStats = [
-        { state: 'UP', cases: 95000, rate: 25.5 },
-        { state: 'WB', cases: 88000, rate: 22.1 },
-        { state: 'MH', cases: 75000, rate: 20.8 },
-        { state: 'BR', cases: 62000, rate: 18.2 },
-        { state: 'GJ', cases: 55000, rate: 16.5 },
-    ];
+    const allIndiaStats = stats.length > 0 ? stats.map(s => ({
+        state: s.state,
+        cases: s.total_cases,
+        rate: 0 // We might need to compute rate if not provided by API
+    })) : [];
 
-    const diseaseTrends = [
-        { month: 'Jan', diarrhea: 12000, cholera: 8500, typhoid: 6500, hepatitis: 4500 },
-        { month: 'Feb', diarrhea: 15000, cholera: 9500, typhoid: 7500, hepatitis: 5500 },
-        { month: 'Mar', diarrhea: 20000, cholera: 12000, typhoid: 10000, hepatitis: 7000 },
-        { month: 'Apr', diarrhea: 28000, cholera: 18000, typhoid: 15000, hepatitis: 11000 },
-        { month: 'May', diarrhea: 35000, cholera: 22000, typhoid: 18000, hepatitis: 14000 },
-        { month: 'Jun', diarrhea: 42000, cholera: 28000, typhoid: 22000, hepatitis: 18000 },
-        { month: 'Jul', diarrhea: 50000, cholera: 35000, typhoid: 28000, hepatitis: 23000 },
-        { month: 'Aug', diarrhea: 48000, cholera: 32000, typhoid: 26000, hepatitis: 21000 },
-        { month: 'Sep', diarrhea: 40000, cholera: 28000, typhoid: 22000, hepatitis: 18000 },
-        { month: 'Oct', diarrhea: 32000, cholera: 22000, typhoid: 18000, hepatitis: 15000 },
-        { month: 'Nov', diarrhea: 20000, cholera: 15000, typhoid: 12000, hepatitis: 9000 },
-        { month: 'Dec', diarrhea: 15000, cholera: 10000, typhoid: 8000, hepatitis: 6000 }
-    ];
+    const diseaseTrends = trends.length > 0 ? trends : [];
 
     const teamMembers = [
         { name: "Abhimanyu" }, { name: "Siddharth" }, { name: "Rudra" },
@@ -721,6 +638,7 @@ const App = () => {
             <header className="shadow sticky-top" style={{ background: 'rgba(11, 17, 32, 0.8)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <div className="container-fluid">
                     <div className="d-flex justify-content-between align-items-center py-3">
+                        {dataError && <div className="alert alert-danger w-100">{dataError}</div>}
                         <div className="d-flex align-items-center">
                             <button
                                 className="hamburger-btn btn me-3"
@@ -780,7 +698,7 @@ const App = () => {
                         height: '100vh',
                         top: '0',
                         left: sidebarOpen ? '0' : '-280px',
-                        background: 'linear-gradient(180deg, #011C40 0%, #023859 100%)', // LUNA Gradient
+                        background: 'rgba(0, 0, 0, 0.8)', // Pure Black Glassmorphism
                         borderRight: '1px solid rgba(167, 235, 242, 0.1)',
                         transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         zIndex: 2000,
@@ -918,7 +836,7 @@ const App = () => {
                             </li>
 
                             <li className="mt-4 pt-3 border-top border-secondary">
-                                <small className="text-uppercase text-muted fw-bold mb-3 d-block px-2" style={{ fontSize: '0.7rem', letterSpacing: '0.1em' }}>{t('language')}</small>
+                                <small className="text-uppercase text-white-50 fw-bold mb-3 d-block px-2" style={{ fontSize: '0.7rem', letterSpacing: '0.1em' }}>{t('language')}</small>
                                 <div className="px-0">
                                     <button
                                         onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
@@ -1015,8 +933,10 @@ const App = () => {
                                 </div>
                             </div>
 
+
+
                             <div className="row g-4 mb-4">
-                                <div className="col-lg-6">
+                                <div className="col-lg-6 position-relative">
                                     <OutbreakMap
                                         outbreaks={diseaseOutbreaks}
                                         title={t('allIndiaMapTitle') || "All India Disease Outbreak Monitor"}
@@ -1040,33 +960,40 @@ const App = () => {
                                             <div className="jr-icon-wrapper"><FaDatabase /></div>
                                             <div>
                                                 {t('statisticsTitle')}
-                                                <div className="text-muted small fw-normal mt-1" style={{ fontSize: '0.75rem', letterSpacing: '0.02em' }}>
+                                                <div className="text-white-50 small fw-normal mt-1" style={{ fontSize: '0.75rem', letterSpacing: '0.02em' }}>
                                                     <FaInfoCircle className="me-1" size={10} /> {t('statisticsInfo')}
                                                 </div>
                                             </div>
                                         </div>
                                         <div style={{ width: "100%", minHeight: "400px" }}>
-                                            <ResponsiveContainer width="100%" height={400}>
-                                                <BarChart data={allIndiaStats} barSize={20} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                                    <defs>
-                                                        <linearGradient id="colorCases" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.9} />
-                                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.4} />
-                                                        </linearGradient>
-                                                        <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.9} />
-                                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0.4} />
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                                    <XAxis dataKey="state" stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                                                    <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                                                    <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                                                    <Legend verticalAlign="top" height={36} wrapperStyle={{ color: '#cbd5e1', fontSize: '12px' }} iconType="circle" />
-                                                    <Bar dataKey="cases" fill="url(#colorCases)" name={t('cases')} radius={[4, 4, 0, 0]} />
-                                                    <Bar dataKey="rate" fill="url(#colorRate)" name={`${t('rate')} per 1000`} radius={[4, 4, 0, 0]} />
-                                                </BarChart>
-                                            </ResponsiveContainer>
+                                            {allIndiaStats.length > 0 ? (
+                                                <ResponsiveContainer width="100%" height={400}>
+                                                    <BarChart data={allIndiaStats} barSize={20} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                                        <defs>
+                                                            <linearGradient id="colorCases" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.9} />
+                                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.4} />
+                                                            </linearGradient>
+                                                            <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.9} />
+                                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0.4} />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                                        <XAxis dataKey="state" stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
+                                                        <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
+                                                        <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                                                        <Legend verticalAlign="top" height={36} wrapperStyle={{ color: '#cbd5e1', fontSize: '12px' }} iconType="circle" />
+                                                        <Bar dataKey="cases" fill="url(#colorCases)" name={t('cases')} radius={[4, 4, 0, 0]} />
+                                                        <Bar dataKey="rate" fill="url(#colorRate)" name={`${t('rate')} per 1000`} radius={[4, 4, 0, 0]} />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            ) : (
+                                                <div className="d-flex flex-column justify-content-center align-items-center" style={{ height: '400px' }}>
+                                                    <FaDatabase size={40} className="text-muted mb-3" style={{ opacity: 0.3 }} />
+                                                    <p className="text-muted">No data available</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1082,33 +1009,40 @@ const App = () => {
                                             </div>
                                         </div>
                                         <div style={{ width: "100%", minHeight: "400px" }}>
-                                            <ResponsiveContainer width="100%" height={400}>
-                                                <AreaChart data={diseaseTrends} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                                    <defs>
-                                                        <linearGradient id="colorDiarrhea" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                                                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                                                        </linearGradient>
-                                                        <linearGradient id="colorCholera" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                                                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                                                        </linearGradient>
-                                                        <linearGradient id="colorTyphoid" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                                    <XAxis dataKey="month" stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                                                    <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                                                    <Tooltip content={<CustomChartTooltip />} />
-                                                    <Legend verticalAlign="top" height={36} wrapperStyle={{ color: '#cbd5e1', fontSize: '12px' }} iconType="circle" />
+                                            {diseaseTrends.length > 0 ? (
+                                                <ResponsiveContainer width="100%" height={400}>
+                                                    <AreaChart data={diseaseTrends} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                                        <defs>
+                                                            <linearGradient id="colorDiarrhea" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                                                                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                                                            </linearGradient>
+                                                            <linearGradient id="colorCholera" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                                                                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                                                            </linearGradient>
+                                                            <linearGradient id="colorTyphoid" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                                        <XAxis dataKey="month" stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
+                                                        <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
+                                                        <Tooltip content={<CustomChartTooltip />} />
+                                                        <Legend verticalAlign="top" height={36} wrapperStyle={{ color: '#cbd5e1', fontSize: '12px' }} iconType="circle" />
 
-                                                    <Area type="monotone" dataKey="diarrhea" stroke="#ef4444" strokeWidth={2} fill="url(#colorDiarrhea)" name="Diarrhea" activeDot={{ r: 6, strokeWidth: 0 }} />
-                                                    <Area type="monotone" dataKey="cholera" stroke="#f59e0b" strokeWidth={2} fill="url(#colorCholera)" name="Cholera" activeDot={{ r: 6, strokeWidth: 0 }} />
-                                                    <Area type="monotone" dataKey="typhoid" stroke="#3b82f6" strokeWidth={2} fill="url(#colorTyphoid)" name="Typhoid" activeDot={{ r: 6, strokeWidth: 0 }} />
-                                                </AreaChart>
-                                            </ResponsiveContainer>
+                                                        <Area type="monotone" dataKey="diarrhea" stroke="#ef4444" strokeWidth={2} fill="url(#colorDiarrhea)" name={t('charts.diarrhea')} activeDot={{ r: 6, strokeWidth: 0 }} />
+                                                        <Area type="monotone" dataKey="cholera" stroke="#f59e0b" strokeWidth={2} fill="url(#colorCholera)" name={t('charts.cholera')} activeDot={{ r: 6, strokeWidth: 0 }} />
+                                                        <Area type="monotone" dataKey="typhoid" stroke="#3b82f6" strokeWidth={2} fill="url(#colorTyphoid)" name={t('charts.typhoid')} activeDot={{ r: 6, strokeWidth: 0 }} />
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
+                                            ) : (
+                                                <div className="d-flex flex-column justify-content-center align-items-center" style={{ height: '400px' }}>
+                                                    <FaMapMarkerAlt size={40} className="text-white-50 mb-3" style={{ opacity: 0.3 }} />
+                                                    <p className="text-white-50">{t('dashboard.noTrendData')}</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1131,24 +1065,47 @@ const App = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {diseaseOutbreaks.slice(0, 4).map((outbreak) => (
-                                                <tr key={outbreak.id}>
-                                                    <td className="fw-semibold text-white">{outbreak.name}</td>
-                                                    <td className="text-white-50">{outbreak.state}</td>
-                                                    <td>
-                                                        <span className={`jr-badge-cell ${outbreak.severity === 'critical' ? 'jr-badge-critical' : outbreak.severity === 'high' ? 'jr-badge-high' : 'jr-badge-medium'}`}>
-                                                            {t(`severity.${outbreak.severity}`).toUpperCase()}
-                                                        </span>
-                                                    </td>
-                                                    <td className="text-cyan"><span className="d-flex align-items-center gap-2"><div style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }}></div> Deployed</span></td>
-                                                    <td className="text-muted small">2 hours ago</td>
-                                                </tr>
-                                            ))}
+                                            {emergencyStatus.length > 0 ? (
+                                                emergencyStatus.map((status) => (
+                                                    <tr key={status.id}>
+                                                        <td className="fw-semibold text-white">{status.disease_name}</td>
+                                                        <td className="text-white-50">{status.state}</td>
+                                                        <td>
+                                                            <span className={`jr-badge-cell ${status.severity === 'Critical' ? 'jr-badge-critical' : status.severity === 'High' ? 'jr-badge-high' : 'jr-badge-medium'}`}>
+                                                                {status.severity ? status.severity.toUpperCase() : 'UNKNOWN'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="text-cyan">
+                                                            <span className="d-flex align-items-center gap-2">
+                                                                <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }}></div>
+                                                                {status.response_status || 'Deployed'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="text-white-50 small">
+                                                            {status.last_updated ? new Date(status.last_updated).toLocaleDateString() : 'N/A'}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr><td colSpan="5" className="text-center text-white-50 py-4">{t('dashboard.noEmergencies')}</td></tr>
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
-                        </motion.div>
+
+                            <div className="row mb-4">
+                                <div className="col-12">
+                                    <NewsCard />
+                                </div>
+                            </div>
+
+                            <div className="text-center text-white-50 small mt-4 pb-4">
+                                <p className="mb-0" style={{ fontSize: '0.75rem', letterSpacing: '0.05em', opacity: 0.6 }}>
+                                    {t('disclaimer') || 'Data sourced from mock simulations & IDSP public records (Verified via WHO/MoHFW norms).'}
+                                </p>
+                            </div>
+                        </motion.div >
                     )}
                     {
                         activeTab === 'waterData' && (
@@ -1254,6 +1211,17 @@ const App = () => {
                                             />
                                         </div>
 
+                                        {/* Card 9: Dissolved Oxygen (NEW) */}
+                                        <div className="water-card">
+                                            <SafetyScale
+                                                label="Dissolved Oxygen (mg/L)"
+                                                name="dissolvedOxygen"
+                                                value={waterFormData.dissolvedOxygen}
+                                                min={0} max={20}
+                                                unit="mg/L"
+                                                onChange={handleWaterInputChange}
+                                            />
+                                        </div>
                                         {/* Prediction & Actions Card (Sidebar) */}
                                         <div className="water-card prediction-card">
                                             <div className="d-flex flex-column align-items-center justify-content-center h-100">
@@ -1836,192 +1804,114 @@ const App = () => {
             }
 
             {/* Selected Reading Details Modal */}
-            {selectedReading && (
-                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1055, backdropFilter: 'blur(5px)' }}>
-                    <div className="modal-dialog modal-lg modal-dialog-centered">
-                        <div className="jr-modal-glass">
-                            <div className="jr-modal-header">
-                                <h5 className="modal-title d-flex align-items-center gap-2 text-white">
-                                    <FaClipboardList className="text-primary" />
-                                    {t('readingDetails')}
-                                </h5>
-                                <button type="button" className="jr-btn-close-glass" onClick={() => setSelectedReading(null)}>
-                                    <FaTimes />
-                                </button>
-                            </div>
-                            <div className="jr-modal-body">
-                                <div className="row g-4">
-                                    {/* General Info Section */}
-                                    <div className="col-md-6">
-                                        <div className="jr-info-section">
-                                            <h6 className="jr-section-title">{t('generalInfo')}</h6>
-                                            <div className="d-flex flex-column gap-3">
-                                                <div>
-                                                    <div className="jr-modal-label">{t('deviceName')}</div>
-                                                    <div className="jr-modal-value">{selectedReading.device_name || t('manualEntry')}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="jr-modal-label">{t('timestamp')}</div>
-                                                    <div className="jr-modal-value fs-6">{new Date(selectedReading.timestamp).toLocaleString()}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="jr-modal-label">{t('source')}</div>
-                                                    <div className="d-flex align-items-center gap-2 mt-1">
-                                                        <span className="text-white fs-5">{selectedReading.water_source}</span>
-                                                        <span className="jr-source-icon-small">
-                                                            {selectedReading.water_source === 'River' || selectedReading.water_source === 'Lake' ? <FaTint /> : <FaFaucet />}
-                                                        </span>
+            {
+                selectedReading && (
+                    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1055, backdropFilter: 'blur(5px)' }}>
+                        <div className="modal-dialog modal-lg modal-dialog-centered">
+                            <div className="jr-modal-glass">
+                                <div className="jr-modal-header">
+                                    <h5 className="modal-title d-flex align-items-center gap-2 text-white">
+                                        <FaClipboardList className="text-primary" />
+                                        {t('readingDetails')}
+                                    </h5>
+                                    <button type="button" className="jr-btn-close-glass" onClick={() => setSelectedReading(null)}>
+                                        <FaTimes />
+                                    </button>
+                                </div>
+                                <div className="jr-modal-body">
+                                    <div className="row g-4">
+                                        {/* General Info Section */}
+                                        <div className="col-md-6">
+                                            <div className="jr-info-section">
+                                                <h6 className="jr-section-title">{t('generalInfo')}</h6>
+                                                <div className="d-flex flex-column gap-3">
+                                                    <div>
+                                                        <div className="jr-modal-label">{t('deviceName')}</div>
+                                                        <div className="jr-modal-value">{selectedReading.device_name || t('manualEntry')}</div>
                                                     </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Analysis Section */}
-                                    <div className="col-md-6">
-                                        <div className="jr-info-section h-100">
-                                            <h6 className="jr-section-title">{t('analysisResults')}</h6>
-                                            <div className="d-flex flex-column gap-4">
-                                                <div>
-                                                    <div className="jr-modal-label mb-2">{t('overallStatus')}</div>
-                                                    <span className={`jr-reading-badge ${selectedReading.risk_level === 'Safe' ? 'safe' : selectedReading.risk_level === 'Unsafe' ? 'unsafe' : 'moderate'} fs-6 px-3 py-2`}>
-                                                        {selectedReading.risk_level}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <div className="jr-modal-label mb-2">{t('predictionModel')}</div>
-                                                    <div className="d-flex align-items-center gap-3">
-                                                        <span className={`jr-reading-badge ${selectedReading.analysis_result?.risk_level === 'Safe' ? 'safe' : 'unsafe'} opacity-75`}>
-                                                            {selectedReading.analysis_result?.risk_level || selectedReading.risk_level}
-                                                        </span>
-                                                        <div>
-                                                            <div className="jr-modal-label">{t('confidence')}</div>
-                                                            <div className="text-white fw-bold">{(selectedReading.confidence * 100).toFixed(1)}%</div>
+                                                    <div>
+                                                        <div className="jr-modal-label">{t('timestamp')}</div>
+                                                        <div className="jr-modal-value fs-6">{new Date(selectedReading.timestamp).toLocaleString()}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="jr-modal-label">{t('source')}</div>
+                                                        <div className="d-flex align-items-center gap-2 mt-1">
+                                                            <span className="text-white fs-5">{selectedReading.water_source}</span>
+                                                            <span className="jr-source-icon-small">
+                                                                {selectedReading.water_source === 'River' || selectedReading.water_source === 'Lake' ? <FaTint /> : <FaFaucet />}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* Water Parameters Grid */}
-                                    <div className="col-12">
-                                        <div className="jr-info-section">
-                                            <h6 className="jr-section-title mb-4">{t('waterParameters')}</h6>
-                                            <div className="jr-parameters-grid">
-                                                <div className="jr-parameter-item">
-                                                    <div className="jr-modal-label">{t('phLevel')}</div>
-                                                    <div className="jr-modal-large-value text-info">{selectedReading.ph}</div>
+                                        {/* Analysis Section */}
+                                        <div className="col-md-6">
+                                            <div className="jr-info-section h-100">
+                                                <h6 className="jr-section-title">{t('analysisResults')}</h6>
+                                                <div className="d-flex flex-column gap-4">
+                                                    <div>
+                                                        <div className="jr-modal-label mb-2">{t('overallStatus')}</div>
+                                                        <span className={`jr-reading-badge ${selectedReading.risk_level === 'Safe' ? 'safe' : selectedReading.risk_level === 'Unsafe' ? 'unsafe' : 'moderate'} fs-6 px-3 py-2`}>
+                                                            {selectedReading.risk_level}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <div className="jr-modal-label mb-2">{t('predictionModel')}</div>
+                                                        <div className="d-flex align-items-center gap-3">
+                                                            <span className={`jr-reading-badge ${selectedReading.analysis_result?.risk_level === 'Safe' ? 'safe' : 'unsafe'} opacity-75`}>
+                                                                {selectedReading.analysis_result?.risk_level || selectedReading.risk_level}
+                                                            </span>
+                                                            <div>
+                                                                <div className="jr-modal-label">{t('confidence')}</div>
+                                                                <div className="text-white fw-bold">{(selectedReading.confidence * 100).toFixed(1)}%</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="jr-parameter-item">
-                                                    <div className="jr-modal-label">{t('turbidity')}</div>
-                                                    <div className="jr-modal-large-value text-warning">{selectedReading.turbidity} <span className="fs-6 text-muted">NTU</span></div>
-                                                </div>
-                                                <div className="jr-parameter-item">
-                                                    <div className="jr-modal-label">{t('contaminants')}</div>
-                                                    <div className="jr-modal-large-value text-danger">{selectedReading.contaminant_level} <span className="fs-6 text-muted">ppm</span></div>
-                                                </div>
-                                                <div className="jr-parameter-item">
-                                                    <div className="jr-modal-label">{t('temperature')}</div>
-                                                    <div className="jr-modal-large-value text-primary">{selectedReading.temperature}<span className="fs-6 text-muted">°C</span></div>
-                                                </div>
-                                                <div className="jr-parameter-item">
-                                                    <div className="jr-modal-label">{t('conductivity')}</div>
-                                                    <div className="jr-modal-large-value text-success">{selectedReading.conductivity} <span className="fs-6 text-muted">µS/cm</span></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Water Parameters Grid */}
+                                        <div className="col-12">
+                                            <div className="jr-info-section">
+                                                <h6 className="jr-section-title mb-4">{t('waterParameters')}</h6>
+                                                <div className="jr-parameters-grid">
+                                                    <div className="jr-parameter-item">
+                                                        <div className="jr-modal-label">{t('phLevel')}</div>
+                                                        <div className="jr-modal-large-value text-info">{selectedReading.ph}</div>
+                                                    </div>
+                                                    <div className="jr-parameter-item">
+                                                        <div className="jr-modal-label">{t('turbidity')}</div>
+                                                        <div className="jr-modal-large-value text-warning">{selectedReading.turbidity} <span className="fs-6 text-muted">NTU</span></div>
+                                                    </div>
+                                                    <div className="jr-parameter-item">
+                                                        <div className="jr-modal-label">{t('contaminants')}</div>
+                                                        <div className="jr-modal-large-value text-danger">{selectedReading.contaminant_level} <span className="fs-6 text-muted">ppm</span></div>
+                                                    </div>
+                                                    <div className="jr-parameter-item">
+                                                        <div className="jr-modal-label">{t('temperature')}</div>
+                                                        <div className="jr-modal-large-value text-primary">{selectedReading.temperature}<span className="fs-6 text-muted">°C</span></div>
+                                                    </div>
+                                                    <div className="jr-parameter-item">
+                                                        <div className="jr-modal-label">{t('conductivity')}</div>
+                                                        <div className="jr-modal-large-value text-success">{selectedReading.conductivity} <span className="fs-6 text-muted">µS/cm</span></div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="jr-modal-footer">
-                                <button type="button" className="jr-btn-glass" onClick={() => setSelectedReading(null)}>{t('close')}</button>
+                                <div className="jr-modal-footer">
+                                    <button type="button" className="jr-btn-glass" onClick={() => setSelectedReading(null)}>{t('close')}</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-            <button
-                ref={chatbotToggleRef}
-                onClick={toggleChat}
-                aria-label="Open Jal-Rakshak AI chat window"
-                className="jr-chat-toggle"
-            >
-                {chatOpen ? <FaTimes size={24} color="white" /> : <FaComments size={28} color="white" />}
-            </button>
+                )
+            }
 
-            <AnimatePresence>
-                {chatOpen && (
-                    <motion.div
-                        ref={chatbotRef}
-                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="jr-chat-window"
-                    >
-                        {/* Header */}
-                        <div className="jr-chat-header">
-                            <div className="d-flex align-items-center gap-2">
-                                <div className="bg-white bg-opacity-10 p-2 rounded-circle">
-                                    <FaRobot className="text-white" size={18} />
-                                </div>
-                                <div>
-                                    <div className="fw-bold text-white" style={{ fontSize: '0.95rem' }}>{t('chatTitle')}</div>
-                                    <div className="text-white-50" style={{ fontSize: '0.75rem' }}>{t('onlineAssistant')}</div>
-                                </div>
-                            </div>
-                            <button onClick={toggleChat} className="btn-close btn-close-white opacity-75 hover-opacity-100"></button>
-                        </div>
-
-                        {/* Body */}
-                        <div className="jr-chat-body" ref={widgetChatRef}>
-                            {messages.map((msg) => (
-                                <div key={msg.id} className={`jr-chat-message ${msg.sender === 'user' ? 'user' : 'ai'}`}>
-                                    <div className="markdown-container-small">
-                                        <ReactMarkdown>{msg.text}</ReactMarkdown>
-                                    </div>
-                                    <div className={`jr-chat-timestamp ${msg.sender === 'user' ? 'text-end text-white-50' : 'text-start text-muted'}`}>
-                                        {msg.timestamp}
-                                    </div>
-                                </div>
-                            ))}
-                            {isTyping && (
-                                <div className="jr-chat-message ai">
-                                    <div className="d-flex gap-1 py-1">
-                                        <div className="jr-typing-dot"></div>
-                                        <div className="jr-typing-dot"></div>
-                                        <div className="jr-typing-dot"></div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="jr-chat-footer">
-                            <div className="jr-chat-input-group">
-                                <input
-                                    type="text"
-                                    value={userMessage}
-                                    onChange={(e) => setUserMessage(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                                    placeholder={t('chatPlaceholder')}
-                                    className="jr-chat-input"
-                                />
-                                <button
-                                    onClick={handleSendMessage}
-                                    disabled={!userMessage.trim()}
-                                    className="jr-chat-send"
-                                >
-                                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                                        <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576 6.636 10.07Zm6.787-8.201L1.591 6.602l4.339 2.76 7.494-7.493Z" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
             {/* Add Device Modal - Global */}
             {
                 showAddDeviceModal && (

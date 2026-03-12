@@ -1,0 +1,74 @@
+name: jal_rakshak_app
+description: A premium Flutter Android app for JAL-X platform.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  
+  # Navigation
+  go_router: ^13.0.1
+  
+  # Networking & Auth
+  dio: ^5.4.0
+  supabase_flutter: ^2.12.0
+  firebase_core: ^2.24.2
+  firebase_database: ^10.4.0
+  flutter_secure_storage: ^9.0.0
+  
+  # UI & Assets
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+  lottie: ^2.7.0
+  glass_kit: ^3.0.0 # Check if valid or use custom
+  
+  # Maps & Charts
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+  fl_chart: ^0.66.0
+  
+  # Utils
+  intl: ^0.19.0
+  uuid: ^4.3.3
+  shared_preferences: ^2.2.2
+  tflite_flutter: ^0.12.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  build_runner: ^2.4.8
+  riverpod_generator: ^2.3.9
+  custom_lint: ^0.5.7
+  riverpod_lint: ^2.3.7
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.10
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/jal_x_logo/jal_x_logo.jpeg"
+  min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#000000"
+  image: "assets/images/jal_x_logo/jal_x_logo.jpeg"
+  android_12:
+    image: "assets/images/jal_x_logo/jal_x_logo.jpeg"
+    color: "#000000"
+  web: false
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/images/jal_x_logo/
+    - assets/animations/
+    - assets/models/

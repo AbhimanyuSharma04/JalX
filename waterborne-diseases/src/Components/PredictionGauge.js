@@ -90,11 +90,7 @@ const PredictionGauge = ({ prediction, confidence, isAnalyzing }) => {
                 <h4 className="fw-bold mb-0 text-white" style={{ textShadow: `0 0 15px ${color}` }}>
                     {isAnalyzing ? t('analyzing') : label}
                 </h4>
-                {(confidence !== undefined && confidence !== null && !isAnalyzing &&
-                    !['ready', 'unknown'].includes(normalizedPred) && normalizedPred !== ""
-                ) && (
-                        <small className="text-white-50">{t('confidence') || "Confidence"}: {Math.round(confidence * 100)}%</small>
-                    )}
+
                 {!isAnalyzing && normalizedPred === "" && <small className="text-white-50">{t('predictedByAI')}</small>}
             </div>
         </div>

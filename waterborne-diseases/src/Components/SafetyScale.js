@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import './SafetyScaleCustom.css';
+
 
 const SafetyScale = ({ value, min, max, label, unit, name, onChange, trackType = 'default' }) => {
   const { t } = useTranslation();
@@ -72,7 +72,7 @@ const SafetyScale = ({ value, min, max, label, unit, name, onChange, trackType =
           className="custom-safety-slider"
           min={min}
           max={max}
-          step={trackType === 'ph' ? 0.1 : 1}
+          step={trackType === 'ph' ? 0.1 : 0.01}
           name={name}
           value={isValid ? numVal : min}
           onChange={onChange}
@@ -110,7 +110,7 @@ const SafetyScale = ({ value, min, max, label, unit, name, onChange, trackType =
               className="safety-input-field"
               min={min}
               max={max}
-              step={trackType === 'ph' ? 0.1 : 1}
+              step={trackType === 'ph' ? 0.1 : 0.01}
               name={name}
               value={value}
               onChange={onChange}
